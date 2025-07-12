@@ -1,4 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using WebApp.Server.Data;
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<WebAppServerContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("WebAppServerContext") ?? throw new InvalidOperationException("Connection string 'WebAppServerContext' not found.")));
 
 // Add services to the container.
 

@@ -1,14 +1,21 @@
 using Microsoft.EntityFrameworkCore;
+using DotNetEnv;
 using Microsoft.Extensions.DependencyInjection;
 using WebApp.Server.Data;
+
+DotNetEnv.Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION")
+    ?? throw new InvalidOperationException("DB_CONNECTION not found in environment variables.");
+
 builder.Services.AddDbContext<WebAppServerContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("WebAppServerContext") ?? throw new InvalidOperationException("Connection string 'WebAppServerContext' not found.")));
+    options.UseNpgsql(connectionString));
 
 // Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();

@@ -2,7 +2,6 @@ using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WebApp.Server.Data;
-using WebApp.Server.WebSockets;
 using MySocketManager = WebApp.Server.WebSockets.WebSocketManager;
 
 
@@ -22,28 +21,32 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<MySocketManager>();
-builder.Services.AddSingleton<WebSocketHandler>();
 
 
 var app = builder.Build();
 
 app.UseDefaultFiles();
 app.MapStaticAssets();
+
+//Enable WebSockets
 app.UseWebSockets();
 
-app.Use(async (context, next) =>
+var socketManager = new MySocketManager();
+
+app.Map("/ws", async context =>
 {
-    Console.WriteLine($"Request path: {context.Request.Path}");
-    if (context.Request.Path == "/ws" && context.WebSockets.IsWebSocketRequest)
+    if (context.WebSockets.IsWebSocketRequest)
     {
-        Console.WriteLine("WebSocket connection requested");
-        var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-        var handler = app.Services.GetRequiredService<WebSocketHandler>();
-        await handler.HandleAsync(webSocket);
+        var socket = await context.WebSockets.AcceptWebSocketAsync();
+        var id = Guid.NewGuid().ToString();
+
+        socketManager.AddSocket(id, socket);
+
+        await socketManager.ReceiveAsync(id, socket);
     }
     else
     {
-        await next();
+        context.Response.StatusCode = 400;
     }
 });
 

@@ -63,6 +63,18 @@ public class WebSocketManager
     {
         var buffer = Encoding.UTF8.GetBytes(message);
 
+        var otherSockets = _sockets.Where(pair => pair.Key != excludeId && pair.Value.State == WebSocketState.Open).ToList();
+
+        if (otherSockets.Count == 0 && excludeId != null && _sockets.TryGetValue(excludeId, out var onlyClientSocket))
+        {
+            if (onlyClientSocket.State == WebSocketState.Open)
+            {
+                var onlyOneMsg = Encoding.UTF8.GetBytes("onlyOneClient");
+                await onlyClientSocket.SendAsync(onlyOneMsg, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+            return;
+        }
+
         foreach (var pair in _sockets)
         {
             if (pair.Key == excludeId) continue;

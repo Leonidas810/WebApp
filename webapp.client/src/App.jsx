@@ -80,9 +80,7 @@ function App() {
                                     className="px-4 py-2 rounded-lg text-white transition-colors duration-300 bg-blue-600 hover:bg-blue-700 active:scale-95">
                                     {openRemoteForm ? "Close" : "Open"}
                                 </button>
-                            </div>
-
-                            
+                            </div>                            
                         </>
                          }
                 </div>

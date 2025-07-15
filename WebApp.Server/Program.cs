@@ -15,33 +15,40 @@ var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION")
 builder.Services.AddDbContext<WebAppServerContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Add services to the container.
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-
 builder.Services.AddSingleton<MySocketManager>();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("https://localhost:53246")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 
 var app = builder.Build();
 
+app.UseCors();
 app.UseDefaultFiles();
 app.MapStaticAssets();
-
-//Enable WebSockets
 app.UseWebSockets();
 
-var socketManager = new MySocketManager();
 
 app.Map("/ws", async context =>
 {
     if (context.WebSockets.IsWebSocketRequest)
     {
         var socket = await context.WebSockets.AcceptWebSocketAsync();
-        var id = Guid.NewGuid().ToString();
+        var id = Guid.NewGuid().ToString(); 
+
+        var socketManager = context.RequestServices.GetRequiredService<MySocketManager>();
 
         socketManager.AddSocket(id, socket);
-
         await socketManager.ReceiveAsync(id, socket);
     }
     else
@@ -50,8 +57,6 @@ app.Map("/ws", async context =>
     }
 });
 
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

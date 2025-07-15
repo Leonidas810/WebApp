@@ -1,20 +1,22 @@
 import { useEffect, useState, useRef } from "react";
-import { Table } from "./components/Table";
+import { Table } from "./Components/index";
+import { Input, Button } from "./Components/Atoms/index";
+import {Modal } from "./Components/Templates/index"
 
 function App() {
     const socketRef = useRef(null);
     const [isSocketConnect, setIsSocketConnect] = useState(false);
     const [openRemoteForm, setOpenRemoteForm] = useState(false);
-    const inputContent = useRef('');
+    const [openModal, setOpenModal] = useState(false);
     const originIdRef = useRef(null); 
 
 
-    const createPayload = (Instruction) => {
+    const createPayload = (instruction, message = undefined) => {
         const payload = JSON.stringify({
-            Instruction: Instruction,
+            Instruction: instruction,
             OriginId: originIdRef.current,
             Platform: "web",
-            Message: inputContent.current,
+            Message: message,
         })
         return payload;
     }
@@ -42,7 +44,6 @@ function App() {
             try {
                 const messageObj = JSON.parse(e.data);
                 const { Instruction, id, OriginId, Platform } = messageObj;
-                console.log(messageObj);
 
                 if (Instruction === "connectAck") {
                     originIdRef.current = id;
@@ -67,60 +68,73 @@ function App() {
         return () => socket.close();
     }, []);
 
-    const handleRemoteForm = () => {
+
+
+    const handleRemoteForm = (e) => {
+        const formData = new FormData(e.target);
+        const formDataObj = Object.fromEntries(formData.entries());
+        const message = formDataObj.message || '';
+
         if (!socketRef.current || !originIdRef.current) return;
         let newState = !openRemoteForm;
         try {
             if (newState) {
-                socketRef.current.send(createPayload("openForm"));
+                socketRef.current.send(createPayload("openForm", message));
             } else {
-                socketRef.current.send(createPayload("closeForm"));
+                socketRef.current.send(createPayload("closeForm", message));
             }
         } catch (error) {
             console.error("Failed to send message:", error);
+        } finally {
+            setOpenModal(false);
         }
     };
 
-    return (
-        <div className="h-screen w-screen bg-yellow-800">
-            <div className="flex flex-col p-4 space-y-4 h-full">
-                <div className="text-white">
-                    <h1 className="text-2xl font-bold">WebSocket Client</h1>
-                    <div className="flex items-center justify-end gap-2">
-                        {!isSocketConnect ? (
-                            <>Loading....</>
-                        ) : (
-                                <>
-                                    <div className="flex flex-col gap-1 w-48">
-                                        <label className="text-sm font-medium text-gray-100 mr-2">Message</label>
-                                        <input
-                                            type="text"
-                                            className="bg-white text-gray-900 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                                            onChange={(e) => inputContent.current = e.target.value}
-                                            placeholder="Enter your message..."
-                                        />
-                                    </div>
+    const handleOpenRemoteFormModal = () => {
+        setOpenModal(true);
+    }
 
-                                <span className="font-semibold">WebSocket Status</span>
-                                <span
-                                    className={`size-3 rounded-full ${openRemoteForm ? "bg-green-500" : "bg-red-500"
-                                        }`}
-                                />
-                                <button
-                                    onClick={handleRemoteForm}
-                                    className="px-4 py-2 rounded-lg text-white transition-colors duration-300 bg-blue-600 hover:bg-blue-700 active:scale-95"
-                                >
-                                    {openRemoteForm ? "Close" : "Open"}
-                                </button>
-                            </>
-                        )}
+    return (
+        <>
+            <div className="h-screen w-screen bg-gray-900 overflow-hidden">
+                <div className="flex flex-col h-full p-10 space-y-4">
+                    <div className="h-1/10 text-white flex justify-between">
+                        <div className={"flex flex-col justify-center items-start" }>
+                            <h1 className="text-2xl font-bold">WebSocket Client</h1>
+                            <p>Leonardo Lopez Perez</p>
+                        </div>
+                        <div className="flex items-center justify-end">
+                            {!isSocketConnect ? (
+                                <>Conexion cerrada</>
+                            ) : (
+                                <>
+                                    <span className="font-semibold">WebSocket Status</span>
+                                    <span className={`size-3 rounded-full mx-2 ${openRemoteForm ? "bg-green-500" : "bg-red-500"}`} />
+                                    <Button onClick={handleOpenRemoteFormModal}>
+                                        {openRemoteForm ? "Close Form" : "Open Form"}
+                                    </Button>
+                                </>
+                            )}
+                        </div>
                     </div>
-                </div>
-                <div className="flex-grow">
                     <Table />
                 </div>
+
             </div>
-        </div>
+            {openModal &&
+                <Modal
+                    title={"Are you sure that want open windowsForm?"}
+                    onClose={() => setOpenModal(false)}
+                    onSubmit={handleRemoteForm }
+                >
+                <Input
+                    label="Message"
+                    name="message"
+                    placeholder="Enter your message..."
+                />
+            </Modal>
+            }
+        </>
     );
 }
 

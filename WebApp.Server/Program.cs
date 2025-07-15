@@ -1,7 +1,9 @@
-using Microsoft.EntityFrameworkCore;
 using DotNetEnv;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WebApp.Server.Data;
+using MySocketManager = WebApp.Server.WebSockets.WebSocketManager;
+
 
 DotNetEnv.Env.Load();
 
@@ -13,17 +15,48 @@ var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION")
 builder.Services.AddDbContext<WebAppServerContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Add services to the container.
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<MySocketManager>();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("https://localhost:53246")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 
 var app = builder.Build();
 
+app.UseCors();
 app.UseDefaultFiles();
 app.MapStaticAssets();
+app.UseWebSockets();
 
-// Configure the HTTP request pipeline.
+
+app.Map("/ws", async context =>
+{
+    if (context.WebSockets.IsWebSocketRequest)
+    {
+        var socket = await context.WebSockets.AcceptWebSocketAsync();
+        var id = Guid.NewGuid().ToString(); 
+
+        var socketManager = context.RequestServices.GetRequiredService<MySocketManager>();
+
+        socketManager.AddSocket(id, socket);
+        await socketManager.ReceiveAsync(id, socket);
+    }
+    else
+    {
+        context.Response.StatusCode = 400;
+    }
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

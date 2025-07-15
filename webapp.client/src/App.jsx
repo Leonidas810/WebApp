@@ -91,7 +91,16 @@ function App() {
                             <>Loading....</>
                         ) : (
                                 <>
-                                <input onChange={(e)=>inputContent.current=e.target.value} />
+                                    <div className="flex flex-col gap-1 w-48">
+                                        <label className="text-sm font-medium text-gray-100 mr-2">Message</label>
+                                        <input
+                                            type="text"
+                                            className="bg-white text-gray-900 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                                            onChange={(e) => inputContent.current = e.target.value}
+                                            placeholder="Enter your message..."
+                                        />
+                                    </div>
+
                                 <span className="font-semibold">WebSocket Status</span>
                                 <span
                                     className={`size-3 rounded-full ${openRemoteForm ? "bg-green-500" : "bg-red-500"
